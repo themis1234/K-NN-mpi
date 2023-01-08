@@ -3,6 +3,8 @@
 #include <stdbool.h>
 
 
+
+
 typedef struct knnresult{
   int    ** nidx;    //!< Indices (0-based) of nearest neighbors [m-by-k]
   double ** ndist;   //!< Distance of nearest neighbors          [m-by-k]

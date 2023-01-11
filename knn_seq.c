@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-//test
+
 typedef struct knnresult{
   int    ** nidx;    //!< Indices (0-based) of nearest neighbors [m-by-k]
   double ** ndist;   //!< Distance of nearest neighbors          [m-by-k]
@@ -38,7 +38,7 @@ int find_distance(int* X, int* Y, int d){
 
 
 
-void find_neighbors(knnresult *result, int X[9][2], int Y[9][2]){
+void find_neighbors(knnresult *result, int X[][2], int Y[9][2]){
     int k = result->k;
     int n = result->n;
     int d = result->d;

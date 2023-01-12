@@ -38,48 +38,48 @@ int find_distance(int* X, int* Y, int d){
 
 
 
-void find_starting_neighbors(knnresult *result, int X[][2], int Y[][2]){
-    int k = result->k;
-    int n = result->n;
-    int d = result->d;
+void find_starting_neighbors(int n, int k , int d, int index, int** X, int** Y,int** indices, double** distances, int rank){
+    
     for(int j = 0; j < n; j++){
         //printf("%d \n\n",j);
         int distance;
-        int* indices = calloc(k,sizeof(int));
-        double* distances = calloc(k,sizeof(double));
+        
         bool flag;
         //Insert the first k neighbors and sort them
         for(int start = 0; start < k; start++){
+            //printf("%d\n", rank);
             distance = find_distance(X[j],Y[start],d);
+            //printf("%d\n", rank);
             flag = true;
             for(int i = 0; i < k; i++){
-                if(distances[i]>distance){
-                    push_array(distances,indices,start,i,distance,k);
+                if(distances[j][i]>distance){
+                    push_array(distances[j],indices[j],start+index,i,distance,k);
                     flag = false;
                     break;
                 }
             }
             if(flag){
-                indices[start] = start;
-                distances[start] = distance;
+                indices[j][start] = start + index;
+                distances[j][start] = distance;
             }
         }
         for(int i = k; i < n; i++){
             distance = find_distance(X[j],Y[i],d);
+            //printf("%d\n", rank);
+
             //The array distances is sorted so the max value is the last value
-            if(distance<distances[k-1]){
-                for(int j = 0; j < k; j++){
-                    if(distances[j]>distance){
-                        push_array(distances,indices,i,j,distance,k);
+            if(distance<distances[j][k-1]){
+                for(int l = 0; l < k; l++){
+                    //printf("%d\n", rank);
+                    if(distances[j][l]>distance){
+                        push_array(distances[j],indices[j],index+i,l,distance,k);
                         break;
                     }
                 }
             }
         }
         
-        // result->ndist[j]=distances;
-        // result->nidx[j]=indices;
-        // printf("\n");
+
     }
 }
 
@@ -141,18 +141,18 @@ void ring_transfer(int rank, int procs, int size, int previous_size, int d, int*
 
 }
 
-void data_receive(int procs, int n, int d,int** Z, int tag){
+void data_receive(int procs, int n, int d,int** Z){
     MPI_Status status;
     for(int i = 0; i < n/procs; i++){   
         
-        MPI_Recv((void*)Z[i],d,MPI_INT,0,tag,MPI_COMM_WORLD,&status);
+        MPI_Recv((void*)Z[i],d,MPI_INT,0,1,MPI_COMM_WORLD,&status);
     }
 }
 
-void data_send(int procs, int X[9][2], int n, int d, int tag){
+void data_send(int procs, int X[9][2], int n, int d){
     for(int i = 1; i < procs; i++){
         for(int j = (i-1)*n/procs; j < n/procs*i; j++){
-                MPI_Send((void*)X[j],d,MPI_INT,i,tag,MPI_COMM_WORLD);    
+                MPI_Send((void*)X[j],d,MPI_INT,i,1,MPI_COMM_WORLD);    
         }
     }
 }
@@ -161,16 +161,17 @@ int main(int argc, char** argv) {
     knnresult result;
     result.k = 3;
     result.d = 2;
-    result.n = 9;
+    result.n = 13;
     int m,n,d,k;
-    n = 9;
+    k = 3;
+    n = 13;
     d = 2;
     result.ndist = malloc(sizeof(double*)*n);
     result.nidx = malloc(sizeof(int*)*n);
 
 
-    int procs,rank,indices;
-    int X[9][2] ={
+    int procs,rank,index,X_size;
+    int X[13][2] ={
          {1,4},
          {2,7},
          {3,6},
@@ -179,9 +180,14 @@ int main(int argc, char** argv) {
          {6,8},
          {7,5},
          {8,2},
-         {9,1}
+         {9,1},
+         {4,4},
+         {8,3},
+         {1,1},
+         {2,2}
+     
     };
-    int Y[9][2] ={
+    int Y[13][2] ={
          {1,4},
          {2,7},
          {3,6},
@@ -190,7 +196,12 @@ int main(int argc, char** argv) {
          {6,8},
          {7,5},
          {8,2},
-         {9,1}
+         {9,1},
+         {4,4},
+         {8,3},
+         {1,1},
+         {2,2}
+        
     };
 
     MPI_Init(&argc,&argv);
@@ -209,8 +220,7 @@ int main(int argc, char** argv) {
     
     if(rank==0){
         
-        data_send(procs, X, n, d, 0);
-        data_send(procs, Y, n, d, 1);
+        data_send(procs, Y, n, d);
 
         for (int i = 0; i < n/procs+n%procs; i++)
         {   for(int j = 0; j < d; j++){
@@ -218,46 +228,78 @@ int main(int argc, char** argv) {
                 Z[i][j] = X[(procs-1)*n/procs+i][j];
             }
         }
+        copy_array(size,d,X_piece,Z);
         size = n/procs+n%procs;
+        X_size = size;
+        index = (procs-1)*n/procs;
     }
     else{
 
-        data_receive(procs,n,d,X_piece,0);
-        data_receive(procs,n,d,Z,1);
+        data_receive(procs, n, d, Z);
         size = n/procs;
+        X_size = size;
+        index = (rank - 1)*n/procs;
+        copy_array(size,d,X_piece,Z);
     }
-    
+    int** indices = calloc(sizeof(int*),X_size);
+    double** distances = calloc(sizeof(double*),X_size);
+    for(int i = 0; i < X_size; i++){
+        distances[i] = calloc(sizeof(double),k);
+        indices[i] = calloc(sizeof(int),k);
+    }
+
+
+    find_starting_neighbors(X_size,k,d,index,X_piece,Z,indices,distances,rank);
     int previous_size = size;
     size = new_size(rank,procs,size);
+    index -= size;
+    if(index<0){
+        index+=n;
+    }
     
     int** new_Z = malloc(sizeof(int*)*(n/procs+n%procs));
     for(int i = 0; i < n/procs+n%procs; i++){
         new_Z[i] = malloc(sizeof(int)*d);
     }
 
-    //find_neighbors(&result,X_piece,Z);
     ring_transfer(rank,procs,size,previous_size,d,Z,new_Z);
     copy_array(size,d,Z,new_Z);
     
-    for(int i = 0; i < size; i++){
-            printf("%d : %d %d \n", rank,Z[i][0], Z[i][1]);
+    int distance;
+    for(int p = 1; p < procs; p++){
+        for(int j = 0; j < X_size; j++){
+            for(int i = 0; i < size; i++){
+                distance = find_distance(X_piece[j],Z[i],d);
+
+                //The array distances is sorted so the max value is the last value
+                if(distance<distances[j][k-1]){
+                    for(int l = 0; l < k; l++){
+                        //printf("%d\n", rank);
+                        if(distances[j][l]>distance){
+                            push_array(distances[j],indices[j],index+i,l,distance,k);
+                            break;
+                        }
+                    }
+                }
+            }
         }
-
-    for(int i = 1; i < procs; i++){
-
-        
-
-
-        ring_transfer(rank,procs,size,previous_size,d,Z,new_Z);
-        copy_array(size,d,Z,new_Z);
-        // for(int i = 0; i < size; i++){
-        //     printf("%d : %d %d \n", rank,Z[i][0], Z[i][1]);
-        // }
         
         previous_size = size;
         size = new_size(rank,procs,size);
-        //printf("%d : %d %d \n",rank,previous_size,size);
+        index -= size;
+        if(index<0){
+        index+=n;
+        }
+        ring_transfer(rank,procs,size,previous_size,d,Z,new_Z);
+        copy_array(size,d,Z,new_Z);
 
     }
+    for(int i = 0; i < X_size; i ++){
+        for(int j = 0; j < k; j++){
+            printf("%d %f ", indices[i][j], distances[i][j]);
+        }
+        printf("\n");
+    }
+
     MPI_Finalize();
 }

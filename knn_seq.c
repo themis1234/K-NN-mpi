@@ -89,7 +89,7 @@ int main(int argc, char const *argv[])
 {
     knnresult result;
     int **Y;
-    int X[9][2] ={
+    int X[13][2] ={
          {1,4},
          {2,7},
          {3,6},
@@ -98,19 +98,24 @@ int main(int argc, char const *argv[])
          {6,8},
          {7,5},
          {8,2},
-         {9,1}
+         {9,1},
+         {4,4},
+         {8,3},
+         {1,1},
+         {2,2}
+     
     };
     int m,n,d,k;
     result.k = 3;
     result.d = 2;
-    result.n = 9;
-    result.ndist = malloc(sizeof(double*)*9);
-    result.nidx = malloc(sizeof(int*)*9);
+    result.n = 13;
+    result.ndist = malloc(sizeof(double*)*13);
+    result.nidx = malloc(sizeof(int*)*13);
     m = 9;
     
         find_neighbors(&result,X,X);
     printf("\n");
-    for(int i = 0; i < 9; i ++){
+    for(int i = 0; i < 13; i ++){
         for(int j = 0; j < 3; j++){
             printf("%d %f ", result.nidx[i][j], result.ndist[i][j]);
         }

@@ -119,7 +119,6 @@ int main(int argc, char const *argv[])
             }
         }
     }
-    load_mnist();
    
     //print distances for regular grid
     // find_neighbors(&result,X,Y);

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "mnist.h"
+
 
 
 typedef struct knnresult{
@@ -28,8 +30,8 @@ void push_array(double* distances, int* indices, int new_index, int current_inde
     }
 }
 
-int find_distance(int* X, int* Y, int d){
-    int distance = 0;
+double find_distance(double* X, double* Y, double d){
+    double distance = 0;
     for(int i = 0; i < d; i++){
         distance+= X[i]*X[i] + Y[i]*Y[i] -2*X[i]*Y[i];
     }
@@ -38,12 +40,12 @@ int find_distance(int* X, int* Y, int d){
 
 
 
-void find_neighbors(knnresult *result, int X[][2], int Y[9][2]){
+void find_neighbors(knnresult *result, double** X, double** Y){
     int k = result->k;
     int n = result->n;
     int d = result->d;
-    for(int j = 0; j < n; j++){
-        //printf("%d \n\n",j);
+    int m = result->m;
+    for(int j = 0; j < m; j++){
         int distance;
         int* indices = calloc(k,sizeof(int));
         double* distances = calloc(k,sizeof(double));
@@ -76,50 +78,57 @@ void find_neighbors(knnresult *result, int X[][2], int Y[9][2]){
                 }
             }
         }
-        for(int i = 0; i < k; i++){
-            printf("%d ", indices[i]);
-        }
+        
         result->ndist[j]=distances;
         result->nidx[j]=indices;
-        printf("\n");
     }
 }
 
 int main(int argc, char const *argv[])
 {
     knnresult result;
-    int **Y;
-    int X[13][2] ={
-         {1,4},
-         {2,7},
-         {3,6},
-         {4,2},
-         {5,4},
-         {6,8},
-         {7,5},
-         {8,2},
-         {9,1},
-         {4,4},
-         {8,3},
-         {1,1},
-         {2,2}
-     
-    };
+    int grid_size = 10;
     int m,n,d,k;
-    result.k = 3;
-    result.d = 2;
-    result.n = 13;
-    result.ndist = malloc(sizeof(double*)*13);
-    result.nidx = malloc(sizeof(int*)*13);
-    m = 9;
+    n = 1000;
+    k =27;
+    d = 3;
+    m = n;
+    result.k = k;
+    result.d = d;
+    result.n = n;
+    result.m = m;
     
-        find_neighbors(&result,X,X);
-    printf("\n");
-    for(int i = 0; i < 13; i ++){
-        for(int j = 0; j < 3; j++){
-            printf("%d %f ", result.nidx[i][j], result.ndist[i][j]);
+    result.ndist = malloc(sizeof(double*)*n);
+    result.nidx = malloc(sizeof(int*)*n);
+    
+
+    double** X = malloc(sizeof(double*)*n);
+    double** Y = malloc(sizeof(double*)*n);
+    int id = 0;
+    for(int i = 0; i< grid_size; i++){
+        for(int j =0; j < grid_size; j++){
+            for(int k = 0; k < grid_size; k++){
+                X[id] = malloc(sizeof(double)*d);
+                Y[id] = malloc(sizeof(double)*d);
+                X[id][0] = i;
+                X[id][1] = j;
+                X[id][2] = k;
+                Y[id][0] = i;
+                Y[id][1] = j;
+                Y[id][2] = k;
+                id++;
+            }
         }
-        printf("\n");
     }
+    load_mnist();
+   
+    //print distances for regular grid
+    // find_neighbors(&result,X,Y);
+    // for(int i = 0; i < n; i ++){
+    //     for(int j = 0; j < k; j++){
+    //         printf("%d ", (int)result.ndist[i][j]);
+    //     }
+    //     printf("\n");
+    // }
     return 0;
 }

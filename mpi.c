@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <stdbool.h>
-#include "mnist.h"
 
 
 typedef struct knnresult{

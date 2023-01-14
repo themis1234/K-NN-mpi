@@ -160,7 +160,6 @@ void data_send(int procs, double** X, int n, int d, int tag){
 }
 
 int main(int argc, char** argv) {
-    load_mnist();
     knnresult result;
     int m,n,d,k;
     k = 27;
